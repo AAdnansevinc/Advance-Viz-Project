@@ -25,6 +25,13 @@ nrow(data)
 data <- data[complete.cases(data),]  #only complete dataset
 nrow(data)
 
+
+
+#drop the below columns
+# ["NegativeEffect","PositiveEffect","Confidence"]
+names(data)
+
+
 head(data)
 tail(data)
 #Rename Columns
@@ -55,9 +62,15 @@ summary(data)
 
 ## Prepare data  
 
-#Adnan Graphs
 
-#1) Slope Graph in ggplot2
+#1) Map #Dustin_3
+
+# 1.1) Countries
+# 1.2) Europe
+
+#2) Slope Graph in ggplot2 or  most probably Bump Chart # Adnan_1
+# European countries, bottom 10.
+# Top 10 counties by happiness score 
 data1<-data %>% 
   select("Country","Year","HappinessScore") %>% 
   mutate(HappinessScore = round(HappinessScore,1)) %>% 
@@ -74,13 +87,26 @@ newggslopegraph(data1, Year, HappinessScore, Country,
   theme(legend.position = "none")
 
 
-#2) Map
+#3) Scatter plot relationship, Correlation Matrix # Adnan_2
 
 
-#3) Scatter plot relationship
+head(data)
+
+#4) Bobble plot from gganimate()    # Dustin_1
+# variable > gdp and happiness score
+#https://gganimate.com/
+#https://exts.ggplot2.tidyverse.org/gallery/
 
 
-#4) Correlation Matrix
+#5) Line Chart # to observe happiness over time # Dustin_2
 
+#at lest two line one for average
+# one for each countinent.
+
+#6) Histogram > distribution of happiness score > look  at the class 7. #Adnan_4
+
+#7) Boxplot by contient #Dustin_4
+
+#8) BarPlot focusing on poland. #Adnan_3
 
      
