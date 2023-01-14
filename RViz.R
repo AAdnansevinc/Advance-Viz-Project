@@ -10,7 +10,12 @@ pacman::p_load(
                "CGPfunctions",
                "rnaturalearth",
                "sf",
-               "cowplot"
+               "cowplot",
+               "gganimate",
+               "gifski",
+               "wbstats",
+               "reshape2",
+               "ggrepel"
 )
 
 
@@ -23,27 +28,27 @@ setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 #Upload Dataset
 
 data <- read.csv("data/DataForTable2.1.csv")
-nrow(data)
 
+# Getting additional stats for countries
+my_indicators <- c(
+  life_exp = "SP.DYN.LE00.IN", 
+  gdp_capita ="NY.GDP.PCAP.CD", 
+  pop = "SP.POP.TOTL"
+)
+world_stats <- wb_data(my_indicators, start_date = min(data$year), end_date = max(data$year))
+
+# Inspecting dataframe
+nrow(data)
 data <- data[complete.cases(data),]  #only complete dataset
 nrow(data)
-
-# Add missing years
-countries <- unique(data$Country)
-years <- unique(data$Year)
-all <- data.frame(expand.grid(countries,years))
-names(all) <- c("Country", "Year")
-data <- left_join(all,data, by = c("Country"="Country", "Year" = "Year"))
 
 #drop the below columns
 # ["NegativeEffect","PositiveEffect","Confidence"]
 names(data)
-
-
 head(data)
 tail(data)
-#Rename Columns
 
+#Rename Columns
 names(data)<-c("Country", 
                "Year", 
                "HappinessScore",  #"LifeLadder"
@@ -56,9 +61,20 @@ names(data)<-c("Country",
                "PositiveEffect",
                "NegativeEffect",
                "Confidence")
-
-
 names(data)
+
+# Add missing years
+countries <- unique(data$Country)
+years <- unique(data$Year)
+all <- data.frame(expand.grid(countries,years))
+names(all) <- c("Country", "Year")
+data <- left_join(all,data, by = c("Country"="Country", "Year" = "Year"))
+
+data <- left_join(data,world_stats, by = c("Country"="country", "Year" = "date"))
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+data <- left_join(data, world[c("name","economy","continent", "subregion")], by = c("Country"="name"))
 
 head(data)
 tail(data)
@@ -75,33 +91,35 @@ summary(data)
 
 # 1.1) Countries
 
-world <- ne_countries(scale = "medium", returnclass = "sf")
-
+# filter to 2021
 data_2021 <- data %>% 
   mutate(HappinessScore = round(HappinessScore,2)) %>% 
   filter(Year == 2021)
 
+# join spacial data with dataset
 data_world <- full_join(data_2021, world, by = c("Country"="name"))
 
+# create base world plot
 theme_set(theme_bw())
 
 gworld_base <- 
   ggplot(data = data_world) +
-  # geom_sf(aes(fill = income_grp)) +
   coord_sf(expand = FALSE) +
   geom_sf(aes(geometry =  geometry, fill =  HappinessScore)) +
   scale_fill_gradient(low="red", high="green",na.value = "grey") 
-  
+
+# World Plot  
 gworld <- 
   gworld_base +
   theme(legend.position = 'bottom',
-        plot.title = element_text(size = 20)) +
-  labs(title = "Happieness Worldwide in 2021")
+        plot.title = element_text(size = 20, hjust = 0.5)) +
+  labs(title = "Happiness Worldwide in 2021")
 
 gworld
 
 # 1.2) Europe
 
+# Use world base plot for subplot
 gworld_sub <- 
   gworld_base +
   geom_rect(xmin = -30, xmax = 50, ymin = 35, ymax = 70, 
@@ -111,23 +129,18 @@ gworld_sub <-
         axis.ticks=element_blank(),
         )
 
-
+# create plot for Europe
 geurope <- ggplot(data = data_world) +
   # geom_sf(aes(fill = income_grp)) +
   coord_sf(expand = FALSE) +
   geom_sf(aes(geometry =  geometry, fill =  HappinessScore)) +
   scale_fill_gradient(low="red", high="green",na.value = "grey") +
   coord_sf(xlim = c(-30, 50), ylim = c(35, 70), expand = TRUE) +
-  # scale_fill_brewer(palette = 'YlOrBr') +
-  # scale_fill_viridis_c(option = "plasma", trans = "sqrt", 
-  #                      breaks = seq(0, 10e09, by=250e6),
-  #                      labels = paste(seq(0, 10e09, by=250e6)/1e6, 'mln'),
-  #                      guide = guide_colorbar(barwidth = 30), name = NULL) +
-  # theme(legend.position = 'right') 
   theme(legend.position = 'bottom',
-        plot.title = element_text(size = 20)) +
-  labs(title = "Happieness Europe in 2021")
+        plot.title = element_text(size = 20, hjust = 0.5)) +
+  labs(title = "Happiness Europe in 2021")
 
+# generate plot 
 ggdraw() +
   draw_plot(geurope,
             0, 0, 1, 1) +
@@ -164,11 +177,67 @@ head(data)
 #https://gganimate.com/
 #https://exts.ggplot2.tidyverse.org/gallery/
 
+p <- ggplot(data, aes(GDPPer, HappinessScore, size = pop, colour = Country)) +
+  geom_point(alpha = 0.7, show.legend = FALSE) +
+  # scale_colour_manual(values = country_colors) +
+  scale_size(range = c(2, 12)) +
+  scale_x_log10() +
+  # geom_label_repel(aes(label = Country), size = 2) + 
+  # facet_wrap(~continent) +
+  # Here comes the gganimate specific bits
+  theme(plot.title = element_text(size = 20, hjust = 0.5)) +
+  labs(title = 'Happiness vs. GDP per Capita Over Time in {round(frame_time,0)}', x = 'GDP per capita', y = 'Happiness') +
+  transition_time(Year) +
+  ease_aes('linear')
+
+animate(p, renderer = gifski_renderer(), start_pause = 2, end_pause = 30)
+
+a <- ggplot(filter(data, !is.na(data$HappinessScore)), aes(GDPPer, HappinessScore, size = pop)) +
+  geom_point(alpha = 0.7, show.legend = FALSE, aes(color = Country), na.rm = FALSE) +
+  # scale_colour_manual(values = country_colors) +
+  scale_size(range = c(2, 12)) +
+  scale_x_log10() +
+  geom_label_repel(aes(label = Country), size = 2, na.rm = FALSE) +
+  theme(plot.title = element_text(size = 20, hjust = 0.5)) +
+  # facet_wrap(~continent) +
+  # Here comes the gganimate specific bits
+  labs(title = 'Happiness vs. GDP per Capita Over Time in {round(frame_time,0)}', x = 'GDP per capita', y = 'Happiness') +
+  transition_time(Year) +
+  shadow_wake(0.5) +
+  ease_aes('linear')
+
+a
+ 
+gif <- animate(a, renderer = gifski_renderer(), start_pause = 2, end_pause = 30,duration = 60)
+
+anim_save(a, "HappinessVsGDP.gif")
+
 
 #5) Line Chart # to observe happiness over time # Dustin_2
 
 #at lest two line one for average
 # one for each countinent.
+
+
+
+ggplot() +
+  # geom_point(data %>% 
+  #              group_by(Year) %>% 
+  #              summarise(mean = mean(HappinessScore, na.rm = TRUE)),
+  #            mapping = aes(x= Year, y= mean)) +
+  # geom_line(data %>% 
+  #             group_by(Year) %>% 
+  #             summarise(mean = mean(HappinessScore, na.rm = TRUE)),
+  #           mapping = aes(x= Year, y= mean)) +
+  geom_point(data %>% 
+               group_by(Year, continent) %>% 
+               summarise(mean = mean(HappinessScore, na.rm = TRUE)),
+             mapping = aes(x= Year, y= mean, color = continent)) +
+  geom_line(data %>% 
+              group_by(Year, continent) %>% 
+              summarise(mean = mean(HappinessScore, na.rm = TRUE)),
+            mapping = aes(x= Year, y= mean, color = continent)) +
+  
 
 #6) Histogram > distribution of happiness score > look  at the class 7. #Adnan_4
 
