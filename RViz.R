@@ -23,7 +23,8 @@ pacman::p_load(
                "gganimate",
                "gifski",
                "wbstats",
-               "directlabels"
+               "directlabels",
+               "gapminder"
                
 )
 
@@ -249,7 +250,7 @@ g2 <- ggplot(data_Scatter,aes(x = SocialSupport, y = HappinessScore,color = Pola
   scale_y_continuous(breaks = seq(0, 8, by = 0.5))+
   scale_x_continuous(breaks = seq(0, 1, by = 0.1))+
   labs(title = '',
-       x = 'SocialSupport' , y = 'HappinessScore')
+       x = 'Social Support' , y = 'HappinessScore')
 
 g3 <- ggplot(data_Scatter,aes(x = LifeExpectancy, y = HappinessScore,color = PolandFlag)) + 
   geom_point(color = "#adaaaa") +
@@ -259,7 +260,7 @@ g3 <- ggplot(data_Scatter,aes(x = LifeExpectancy, y = HappinessScore,color = Pol
   scale_y_continuous(breaks = seq(0, 8, by = 0.5))+
   scale_x_continuous(breaks = seq(10, 70, by = 10))+
   labs(title = '',
-       x = 'SocialSupport' , y = 'HappinessScore')
+       x = 'Life Expectancy' , y = 'HappinessScore')
 
 g4 <- ggplot(data_Scatter,aes(x = Freedom, y = HappinessScore,color = PolandFlag)) + 
   geom_point(color = "#adaaaa")+
@@ -269,7 +270,7 @@ g4 <- ggplot(data_Scatter,aes(x = Freedom, y = HappinessScore,color = PolandFlag
   scale_y_continuous(breaks = seq(0, 8, by = 0.5))+
   scale_x_continuous(breaks = seq(0, 1, by = 0.1))+
   labs(title = '',
-       x = 'SocialSupport' , y = 'HappinessScore')
+       x = 'Freedom' , y = 'HappinessScore')
 
 
 g4 <- g4 + theme(legend.position = "bottom") # position the legend in the desired way
@@ -312,19 +313,30 @@ grid.arrange(arrangeGrob(g1 + theme(legend.position = "none"),
 #https://gganimate.com/
 #https://exts.ggplot2.tidyverse.org/gallery/
 
+focus <- c("Russia", "Poland", "Germany", "Denmark", "Finland", "France")
+
 # Make a ggplot, but add frame=year: one image per year
-bubble <- ggplot(data, aes(GDPPer, HappinessScore, size = pop, color = continent)) +
-  geom_point(alpha = 0.7) +
+bubble <- ggplot(filter(data, !is.na(data$HappinessScore) & Year > 2005 & continent == "Europe"), aes(gdp_capita, HappinessScore, size = pop, color = Country)) +
+  geom_point(alpha = 0.7,show.legend = TRUE) +
+  # scale_colour_manual(values = country_colors) +
+  scale_size(range = c(2, 12)) +
   scale_x_log10() +
-  theme_bw() +
+  theme(plot.title = element_text(size = 20, hjust = 0.5)) +
+  labs(title = 'Happiness vs. GDP per Capita Over Time in {round(frame_time,0)}', 
+       x = 'GDP per capita', y = 'Happiness',
+       caption = "Own creation. Data: World Happiness Report, World Bank") +
+  geom_label_repel(data = subset(data, Country %in% focus), aes(label = Country), size = 2, color="black") +
+  # facet_wrap(~continent) +
   # gganimate specific bits:
   labs(title = 'Year: {frame_time}', x = 'GDP per Capita', y = 'Happiness') +
-  transition_time(Year) +
+  transition_time(as.integer(Year)) +
   ease_aes('linear')
 
-# Save at gif:
+# Save as gif:
+animate(bubble, duration = 30)
 gif <- animate(bubble,renderer = gifski_renderer())
-anim_save(gif,"BubbleChart.gif",animation=bubble)
+animate(bubble,renderer = gifski_renderer())
+anim_save("BubbleChart.gif",animation=bubble)
 
 ###################################################################################
 
