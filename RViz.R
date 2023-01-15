@@ -15,7 +15,8 @@ pacman::p_load(
                "gifski",
                "wbstats",
                "reshape2",
-               "ggrepel"
+               "ggrepel",
+               "directlabels"
 )
 
 
@@ -97,7 +98,7 @@ data_2021 <- data %>%
   filter(Year == 2021)
 
 # join spacial data with dataset
-data_world <- full_join(data_2021, world, by = c("Country"="name"))
+data_world <- full_join(data_2021, world, by = c("Country"="name","economy","continent", "subregion","geometry"))
 
 # create base world plot
 theme_set(theme_bw())
@@ -113,7 +114,8 @@ gworld <-
   gworld_base +
   theme(legend.position = 'bottom',
         plot.title = element_text(size = 20, hjust = 0.5)) +
-  labs(title = "Happiness Worldwide in 2021")
+  labs(title = "Happiness Worldwide in 2021",
+       caption = "Own creation. Data: World Happiness Report, World Bank")
 
 gworld
 
@@ -134,12 +136,16 @@ geurope <- ggplot(data = data_world) +
   # geom_sf(aes(fill = income_grp)) +
   coord_sf(expand = FALSE) +
   geom_sf(aes(geometry =  geometry, fill =  HappinessScore)) +
+  annotate(geom = "text", x = 19, y = 52, label = "Poland", 
+           fontface = "italic", color = "black", size = 4) +
   scale_fill_gradient(low="red", high="green",na.value = "grey") +
   coord_sf(xlim = c(-30, 50), ylim = c(35, 70), expand = TRUE) +
   theme(legend.position = 'bottom',
         plot.title = element_text(size = 20, hjust = 0.5)) +
-  labs(title = "Happiness Europe in 2021")
+  labs(title = "Happiness Europe in 2021",
+       caption = "Own creation. Data: World Happiness Report, World Bank")
 
+geurope
 # generate plot 
 ggdraw() +
   draw_plot(geurope,
@@ -186,7 +192,9 @@ p <- ggplot(data, aes(GDPPer, HappinessScore, size = pop, colour = Country)) +
   # facet_wrap(~continent) +
   # Here comes the gganimate specific bits
   theme(plot.title = element_text(size = 20, hjust = 0.5)) +
-  labs(title = 'Happiness vs. GDP per Capita Over Time in {round(frame_time,0)}', x = 'GDP per capita', y = 'Happiness') +
+  labs(title = 'Happiness vs. GDP per Capita Over Time in {round(frame_time,0)}', 
+       x = 'GDP per capita', y = 'Happiness',
+       caption = "Own creation. Data: World Happiness Report, World Bank") +
   transition_time(Year) +
   ease_aes('linear')
 
@@ -201,7 +209,9 @@ a <- ggplot(filter(data, !is.na(data$HappinessScore)), aes(GDPPer, HappinessScor
   theme(plot.title = element_text(size = 20, hjust = 0.5)) +
   # facet_wrap(~continent) +
   # Here comes the gganimate specific bits
-  labs(title = 'Happiness vs. GDP per Capita Over Time in {round(frame_time,0)}', x = 'GDP per capita', y = 'Happiness') +
+  labs(title = 'Happiness vs. GDP per Capita Over Time in {round(frame_time,0)}', 
+       x = 'GDP per capita', y = 'Happiness',
+       caption = "Own creation. Data: World Happiness Report, World Bank") +
   transition_time(Year) +
   shadow_wake(0.5) +
   ease_aes('linear')
@@ -218,30 +228,56 @@ anim_save(a, "HappinessVsGDP.gif")
 #at lest two line one for average
 # one for each countinent.
 
+data_line <- data %>%
+  group_by(Year, continent) %>%
+  summarize(HappinessScore = mean(HappinessScore,na.rm = TRUE)) %>%
+  ungroup()
 
+data_line2 <- data %>%
+  group_by(Year) %>%
+  summarize(HappinessScore = mean(HappinessScore,na.rm = TRUE)) %>%
+  ungroup()
 
-ggplot() +
-  # geom_point(data %>% 
-  #              group_by(Year) %>% 
-  #              summarise(mean = mean(HappinessScore, na.rm = TRUE)),
-  #            mapping = aes(x= Year, y= mean)) +
-  # geom_line(data %>% 
-  #             group_by(Year) %>% 
-  #             summarise(mean = mean(HappinessScore, na.rm = TRUE)),
-  #           mapping = aes(x= Year, y= mean)) +
-  geom_point(data %>% 
-               group_by(Year, continent) %>% 
-               summarise(mean = mean(HappinessScore, na.rm = TRUE)),
-             mapping = aes(x= Year, y= mean, color = continent)) +
-  geom_line(data %>% 
-              group_by(Year, continent) %>% 
-              summarise(mean = mean(HappinessScore, na.rm = TRUE)),
-            mapping = aes(x= Year, y= mean, color = continent)) +
-  
+data_line2 <- data_line2 %>% add_column("Country"="World")
+
+names(data_line) <- c("Year",
+                      "Country",
+                      "HappinessScore")
+
+data_line <- union_all(data_line, data_line2)
+data_line <- union_all(data_line, filter(data[c("Year", "Country","HappinessScore")], Country == "Poland"))
+
+ggplot(filter(data_line, Country %in% c("World","Europe","Poland") & Year >= 2010),aes(Year,HappinessScore, group = Country, color = Country)) +
+  geom_rect(aes(xmin = 2019, ymin = -Inf,
+                xmax = Inf, ymax = Inf),
+            alpha = .4, fill = "grey", color = NA
+            ) +
+  geom_line(size = 1.2) +
+  geom_point() +
+  geom_vline(xintercept = 2019,color = "black", size = 2) +
+  geom_dl(aes(label = Country), method = list(dl.combine("last.points"))) +
+  annotate("text", x = 2019, y = 7, label = "COVID-19", vjust = 2, hjust=-0.1, size = 5) +
+  theme(legend.position = 'bottom',
+        plot.title = element_text(size = 20, hjust = 0.5)) +
+  labs(color = NULL,
+       title = "Happiness Under COVID-19",
+       caption = "Own creation. Data: World Happiness Report, World Bank") +
+  scale_color_manual(values = c('#003399', '#D22630', 'black')) 
+
 
 #6) Histogram > distribution of happiness score > look  at the class 7. #Adnan_4
 
 #7) Boxplot by contient #Dustin_4
+
+ggplot(data = filter(data, !is.na(data$continent)),
+       aes(y = HappinessScore, x = continent)) +
+  geom_boxplot() +
+  stat_summary(geom = 'point', shape = 15, fun = mean, size = 2) + 
+  labs(title = "Happiness Compared by Country",
+       x = "",
+       caption = "Own creation. Data: World Happiness Report, World Bank") + 
+  theme(legend.position = 'bottom',
+        plot.title = element_text(size = 20, hjust = 0.5)) 
 
 #8) BarPlot focusing on poland. #Adnan_3
 
