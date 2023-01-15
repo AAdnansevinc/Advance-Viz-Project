@@ -84,7 +84,7 @@ world <- ne_countries(scale = "medium", returnclass = "sf")
 data <- left_join(data, world[c("name","economy","continent", "subregion")], by = c("Country"="name"))
 
 names(data)
-head(data)
+shead(data)
 tail(data)
 
 
@@ -148,7 +148,7 @@ geurope <- ggplot(data = data_world) +
   labs(title = "Happiness Europe in 2021",
        caption = "Own creation. Data: World Happiness Report, World Bank")
 
-geurope
+# geurope
 # generate plot 
 ggdraw() +
   draw_plot(geurope,
@@ -197,7 +197,8 @@ ggplot(data = european_union_data_top10_PL, aes(x = Year, y = round(HappinessSco
   geom_text_repel(data = european_union_data_top10_PL %>% filter(Year == "2010", HappinessScore <= max(european_union_data_top10_PL$HappinessScore)),aes(label = Country), size = 3,hjust = "left",direction = "x") +
   scale_x_continuous(name = "Year",breaks = seq(2010,2019,by=1),expand = c(.2, .2)) + #c(.26, .4)
   scale_y_reverse(breaks = seq(5,8,by=0.1), name = "Happiness score" ) +
-  labs(title = "Top 10 European Union Countries & Poland Happiness score", x = "Year", y = "Score") +
+  labs(title = "Top 10 European Union Countries & Poland Happiness score", x = "Year", y = "Score",
+       caption = "Own creation. Data: World Happiness Report, World Bank") +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         axis.ticks = element_blank(),
@@ -213,7 +214,7 @@ data1$HappinessScore <- round(data1$HappinessScore,2)
 newggslopegraph(data1, Year, HappinessScore, Country,
                 Title = "Top 10 Europena Union & Poland Happiness score",
                 SubTitle = "2010-2019",
-                Caption = "Happiness score",
+                Caption = "Own creation. Data: World Happiness Report, World Bank",
                 DataLabelPadding = 0.2,
                 DataLabelLineSize = 0.5,
                 #ReverseYAxis = TRUE,
@@ -225,12 +226,10 @@ newggslopegraph(data1, Year, HappinessScore, Country,
 
 #source('functions/multiplot.R')
 
-
-
-data <- data %>%  
+data_Scatter <- data %>%  
         mutate(PolandFlag = ifelse(Country == "Poland", "Poland", "Top 10"))
 
-g1 <- ggplot(data,aes(x = GDPPer, y = HappinessScore,color = PolandFlag)) + 
+g1 <- ggplot(data_Scatter,aes(x = GDPPer, y = HappinessScore,color = PolandFlag)) + 
   geom_point(color = "#adaaaa")+
   geom_smooth(alpha = 0.2) +
   geom_rect(xmin = 9.977814, xmax = 10.4364, ymin = 5.646205, ymax = 6.242094, 
@@ -242,7 +241,7 @@ g1 <- ggplot(data,aes(x = GDPPer, y = HappinessScore,color = PolandFlag)) +
   labs(title = '',
        x = 'GDP Per capita' , y = 'HappinessScore')
 
-g2 <- ggplot(data,aes(x = SocialSupport, y = HappinessScore,color = PolandFlag)) + 
+g2 <- ggplot(data_Scatter,aes(x = SocialSupport, y = HappinessScore,color = PolandFlag)) + 
   geom_point(color = "#adaaaa") +
   geom_rect(xmin = 0.8634442, xmax = 0.9550653, ymin = 5.646205, ymax = 6.242094, 
             fill = NA, colour = "red", size = 1)+
@@ -252,7 +251,7 @@ g2 <- ggplot(data,aes(x = SocialSupport, y = HappinessScore,color = PolandFlag))
   labs(title = '',
        x = 'SocialSupport' , y = 'HappinessScore')
 
-g3 <- ggplot(data,aes(x = LifeExpectancy, y = HappinessScore,color = PolandFlag)) + 
+g3 <- ggplot(data_Scatter,aes(x = LifeExpectancy, y = HappinessScore,color = PolandFlag)) + 
   geom_point(color = "#adaaaa") +
   geom_smooth()+
   geom_rect(xmin = 66.56, xmax = 69.05, ymin = 5.646205, ymax = 6.242094, 
@@ -262,7 +261,7 @@ g3 <- ggplot(data,aes(x = LifeExpectancy, y = HappinessScore,color = PolandFlag)
   labs(title = '',
        x = 'SocialSupport' , y = 'HappinessScore')
 
-g4 <- ggplot(data,aes(x = Freedom, y = HappinessScore,color = PolandFlag)) + 
+g4 <- ggplot(data_Scatter,aes(x = Freedom, y = HappinessScore,color = PolandFlag)) + 
   geom_point(color = "#adaaaa")+
   geom_smooth()+
   geom_rect(xmin = 0.7318056, xmax = 0.8828858, ymin = 5.646205, ymax = 6.242094, 
