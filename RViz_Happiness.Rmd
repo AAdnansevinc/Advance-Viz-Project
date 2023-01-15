@@ -3,9 +3,10 @@ title: "Happiness"
 subtitle: "A Journey Around the Globe."
 author: "Dustin Pacholleck & Adnan Sevinc"
 date: "2023-01-15"
-output: ioslides_presentation:
-  widescreen: true,
-  logo: ![](img/wne_logo2017.png)
+output: 
+  ioslides_presentation:
+    widescreen: true
+    logo: img/wne_logo2017.png 
   
 ---
 
@@ -14,13 +15,13 @@ knitr::opts_chunk$set(
 	echo = FALSE,
 	message = FALSE,
 	warning = FALSE,
-	cache = TRUE
+	cache = FALSE
 )
 ```
 
 
 
-```{r settings, include=FALSE}
+```{r settings_1, include=FALSE}
 #install needed packages
 if (!require("pacman")) install.packages("pacman")
 
@@ -377,10 +378,10 @@ bubble <- ggplot(data_bubble, aes(gdp_capita, HappinessScore, size = pop, color 
 
 # Save as gif:
 gif <- animate(bubble,renderer = gifski_renderer(), end_pause=100, nframes = 200)
-anim_save("BubbleChart.gif",animation=gif) 
+anim_save("img/BubbleChart.gif",animation=gif) 
 ```
 
-![](BubbleChart.gif)
+![](img/BubbleChart.gif)
 
 ## Happiness and COVID
 
