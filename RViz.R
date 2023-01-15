@@ -178,10 +178,27 @@ newggslopegraph(data1, Year, HappinessScore, Country,
 
 head(data)
 
-#4) Bobble plot from gganimate()    # Dustin_1
+#4) Bubble plot from gganimate()    # Dustin_1
 # variable > gdp and happiness score
 #https://gganimate.com/
 #https://exts.ggplot2.tidyverse.org/gallery/
+
+# Make a ggplot, but add frame=year: one image per year
+bubble <- ggplot(data, aes(GDPPer, HappinessScore, size = pop, color = continent)) +
+  geom_point(alpha = 0.7) +
+  scale_x_log10() +
+  theme_bw() +
+  # gganimate specific bits:
+  labs(title = 'Year: {frame_time}', x = 'GDP per Capita', y = 'Happiness') +
+  transition_time(Year) +
+  ease_aes('linear')
+
+# Save at gif:
+gif <- animate(bubble,renderer = gifski_renderer())
+anim_save(gif,"BubbleChart.gif",animation=bubble)
+
+###################################################################################
+
 
 p <- ggplot(data, aes(GDPPer, HappinessScore, size = pop, colour = Country)) +
   geom_point(alpha = 0.7, show.legend = FALSE) +
