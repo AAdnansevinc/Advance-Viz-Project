@@ -23,8 +23,7 @@ pacman::p_load(
                "gganimate",
                "gifski",
                "wbstats",
-               "directlabels",
-               "gapminder"
+               "directlabels"
                
 )
 
@@ -250,7 +249,7 @@ g2 <- ggplot(data_Scatter,aes(x = SocialSupport, y = HappinessScore,color = Pola
   scale_y_continuous(breaks = seq(0, 8, by = 0.5))+
   scale_x_continuous(breaks = seq(0, 1, by = 0.1))+
   labs(title = '',
-       x = 'Social Support' , y = 'HappinessScore')
+       x = 'SocialSupport' , y = 'HappinessScore')
 
 g3 <- ggplot(data_Scatter,aes(x = LifeExpectancy, y = HappinessScore,color = PolandFlag)) + 
   geom_point(color = "#adaaaa") +
@@ -260,7 +259,7 @@ g3 <- ggplot(data_Scatter,aes(x = LifeExpectancy, y = HappinessScore,color = Pol
   scale_y_continuous(breaks = seq(0, 8, by = 0.5))+
   scale_x_continuous(breaks = seq(10, 70, by = 10))+
   labs(title = '',
-       x = 'Life Expectancy' , y = 'HappinessScore')
+       x = 'SocialSupport' , y = 'HappinessScore')
 
 g4 <- ggplot(data_Scatter,aes(x = Freedom, y = HappinessScore,color = PolandFlag)) + 
   geom_point(color = "#adaaaa")+
@@ -270,7 +269,7 @@ g4 <- ggplot(data_Scatter,aes(x = Freedom, y = HappinessScore,color = PolandFlag
   scale_y_continuous(breaks = seq(0, 8, by = 0.5))+
   scale_x_continuous(breaks = seq(0, 1, by = 0.1))+
   labs(title = '',
-       x = 'Freedom' , y = 'HappinessScore')
+       x = 'SocialSupport' , y = 'HappinessScore')
 
 
 g4 <- g4 + theme(legend.position = "bottom") # position the legend in the desired way
@@ -309,60 +308,65 @@ grid.arrange(arrangeGrob(g1 + theme(legend.position = "none"),
 
 
 #4) Bubble plot from gganimate()    # Dustin_1
+# variable > gdp and happiness score
+#https://gganimate.com/
+#https://exts.ggplot2.tidyverse.org/gallery/
 
-# Set focus countries
-focus <- c("Poland", "Germany", "Ukraine", "Romania", "Bulgaria")
+# Make a ggplot, but add frame=year: one image per year
+bubble <- ggplot(data, aes(GDPPer, HappinessScore, size = pop, color = continent)) +
+  geom_point(alpha = 0.7) +
+  scale_x_log10() +
+  theme_bw() +
+  # gganimate specific bits:
+  labs(title = 'Year: {frame_time}', x = 'GDP per Capita', y = 'Happiness') +
+  transition_time(Year) +
+  ease_aes('linear')
 
-# search for countries with biggest difference in score
-# inspect <- data_bubble[c("Country", 
-#                          "Year", 
-#                          "HappinessScore",
-#                          "GDPPer",
-#                          "SocialSupport",
-#                          "LifeExpectancy",
-#                          "Freedom",
-#                          "Generosity",
-#                          "Corruption")] %>% 
-#   filter(Country %in% focus) %>%
-#   group_by(Country) %>%
-#   summarise_at(vars(HappinessScore),
-#                list(min = min, max=max)) %>%
-#   mutate(diff = max-min) %>%
-#   arrange(diff) %>%
-#     ungroup()
+# Save at gif:
+gif <- animate(bubble,renderer = gifski_renderer())
+anim_save(gif,"BubbleChart.gif",animation=bubble)
 
-# focus <- unique(data$Country)
+###################################################################################
 
-# set up dataframe
-data_bubble <- data %>% 
-  filter(!is.na(data$HappinessScore) & Year > 2010 & continent == "Europe") %>%
-  mutate(mask= case_when(Country %in% focus ~ Country))
-  
 
-# produce animation
-bubble <- ggplot(data_bubble, aes(gdp_capita, HappinessScore, size = pop, color = mask)) +
-  geom_point(data = subset(data_bubble, !is.na(mask)),
-             aes(gdp_capita, HappinessScore, size = pop, color = mask),
-             alpha = 0.8,show.legend = FALSE) + # Points in Focus
-  geom_point(data = subset(data_bubble, is.na(mask)),
-             aes(gdp_capita, HappinessScore, size = pop, color = mask),
-             alpha = 0.8,show.legend = FALSE) + # Points without Focus
+p <- ggplot(data, aes(GDPPer, HappinessScore, size = pop, colour = Country)) +
+  geom_point(alpha = 0.7, show.legend = FALSE) +
+  # scale_colour_manual(values = country_colors) +
   scale_size(range = c(2, 12)) +
   scale_x_log10() +
+  # geom_label_repel(aes(label = Country), size = 2) + 
+  # facet_wrap(~continent) +
+  # Here comes the gganimate specific bits
   theme(plot.title = element_text(size = 20, hjust = 0.5)) +
   labs(title = 'Happiness vs. GDP per Capita Over Time in {round(frame_time,0)}', 
        x = 'GDP per capita', y = 'Happiness',
        caption = "Own creation. Data: World Happiness Report, World Bank") +
-  geom_text(data = subset(data_bubble, Country %in% focus), aes(label = Country), size = 2, color="black") +
-  # gganimate specific:
-  labs(title = 'Year: {frame_time}', x = 'GDP per Capita', y = 'Happiness') +
-  transition_time(as.integer(Year)) +
-  ease_aes('linear') +
-  shadow_wake(1, alpha = 0.2, exclude_layer = 2:3, size = 1, wrap = FALSE) # no wake for non focus countries and text
+  transition_time(Year) +
+  ease_aes('linear')
 
-# Save as gif:
-gif <- animate(bubble,renderer = gifski_renderer(), end_pause=100, nframes = 200)
-anim_save("BubbleChart.gif",animation=gif)
+animate(p, renderer = gifski_renderer(), start_pause = 2, end_pause = 30)
+
+a <- ggplot(filter(data, !is.na(data$HappinessScore)), aes(GDPPer, HappinessScore, size = pop)) +
+  geom_point(alpha = 0.7, show.legend = FALSE, aes(color = Country), na.rm = FALSE) +
+  # scale_colour_manual(values = country_colors) +
+  scale_size(range = c(2, 12)) +
+  scale_x_log10() +
+  geom_label_repel(aes(label = Country), size = 2, na.rm = FALSE) +
+  theme(plot.title = element_text(size = 20, hjust = 0.5)) +
+  # facet_wrap(~continent) +
+  # Here comes the gganimate specific bits
+  labs(title = 'Happiness vs. GDP per Capita Over Time in {round(frame_time,0)}', 
+       x = 'GDP per capita', y = 'Happiness',
+       caption = "Own creation. Data: World Happiness Report, World Bank") +
+  transition_time(Year) +
+  shadow_wake(0.5) +
+  ease_aes('linear')
+
+a
+
+gif <- animate(a, renderer = gifski_renderer(), start_pause = 2, end_pause = 30,duration = 60)
+
+anim_save(a, "HappinessVsGDP.gif")
 
 
 #5) Line Chart # to observe happiness over time # Dustin_2
