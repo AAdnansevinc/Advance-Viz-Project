@@ -45,7 +45,7 @@ my_indicators <- c(
   gdp_capita ="NY.GDP.PCAP.CD", 
   pop = "SP.POP.TOTL"
 )
-world_stats <- wb_data(my_indicators, start_date = min(data$year), end_date = max(data$year))
+world_stats <- wb_data(my_indicators, start_date = min(data$year), end_date = max(data$year)) #wb_bank getting dataset from dataset
 
 # Inspecting dataframe
 data <- data[complete.cases(data),]  #only complete dataset
