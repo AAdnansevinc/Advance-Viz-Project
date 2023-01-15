@@ -298,6 +298,18 @@ anim_save(a, "HappinessVsGDP.gif")
 
 #7) Boxplot by contient #Dustin_4
 
+ggplot(data = filter(data, !is.na(data$continent)),
+       aes(y = HappinessScore, x = continent)) +
+  geom_boxplot() +
+  stat_summary(geom = 'point', shape = 15, fun = mean, size = 2) + 
+  labs(title = "Happiness Compared by Country",
+       x = "",
+       caption = "Own creation. Data: World Happiness Report, World Bank") + 
+  theme(legend.position = 'bottom',
+        plot.title = element_text(size = 20, hjust = 0.5)) 
+
+
+
 #8) BarPlot focusing on poland. #Adnan_3
 
      
