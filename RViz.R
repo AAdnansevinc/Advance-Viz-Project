@@ -84,7 +84,7 @@ world <- ne_countries(scale = "medium", returnclass = "sf")
 data <- left_join(data, world[c("name","economy","continent", "subregion")], by = c("Country"="name"))
 
 names(data)
-shead(data)
+head(data)
 tail(data)
 
 
