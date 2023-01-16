@@ -23,8 +23,13 @@ pacman::p_load(
                "gganimate",
                "gifski",
                "wbstats",
-               "directlabels"
-               
+               "directlabels",
+               "reshape2",
+               "devtools",
+               "ggstance",
+               "patchwork",
+               "aplot",
+               "tidypaleo"
 )
 
 
@@ -37,6 +42,19 @@ setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 #Upload Dataset
 
 data <- read.csv("data/DataForTable2.1.csv")
+data_raw <- read.csv("data/DataForTable2.1.csv") %>% 
+            select(-c(Negative.affect,Positive.affect,Confidence.in.national.government))
+
+names(data_raw)<-c("Country", 
+               "Year", 
+               "HappinessScore",
+               "GDPPer",
+               "SocialSupport",
+               "LifeExpectancy",
+               "Freedom",
+               "Generosity",
+               "Corruption")
+
 nrow(data)
 
 # Getting additional stats for countries
@@ -171,7 +189,7 @@ european_union <- c("Austria","Belgium","Bulgaria","Croatia","Cyprus",
 
 
 european_union_data <- 
-                      data %>% 
+                     data_raw %>% 
                       filter(Country %in% european_union)
 
 european_union_data_top10 <- european_union_data %>% 
@@ -226,7 +244,7 @@ newggslopegraph(data1, Year, HappinessScore, Country,
 
 #source('functions/multiplot.R')
 
-data_Scatter <- data %>%  
+data_Scatter <- data_raw %>%  
         mutate(PolandFlag = ifelse(Country == "Poland", "Poland", "Top 10"))
 
 g1 <- ggplot(data_Scatter,aes(x = GDPPer, y = HappinessScore,color = PolandFlag)) + 
@@ -412,6 +430,60 @@ ggplot(filter(data_line, Country %in% c("World","Europe","Poland") & Year >= 201
 
 #6) Histogram > distribution of happiness score > look  at the class 7. #Adnan_4
 
+## Option 1
+data_hist <- data %>% 
+            drop_na(continent) %>%
+            select(c("continent",
+                    "Country", 
+                     "Year", 
+                     "HappinessScore",
+                     "GDPPer",
+                     "SocialSupport",
+                     "LifeExpectancy",
+                     "Freedom",
+                     "Generosity",
+                     "Corruption"))
+
+ggplot(data_hist, aes(x = HappinessScore, fill = continent)) + 
+  geom_histogram(fill = "grey", alpha = .5) +
+  geom_histogram(colour = "black") +
+  facet_wrap(~ continent) + guides(fill = FALSE)
+  
+  
+data_hist_europe <- data %>% 
+                filter(continent == "Europe") %>% 
+                drop_na(continent) %>%
+                select(c("continent",
+                         "Country", 
+                         "Year", 
+                         "HappinessScore",
+                         "GDPPer",
+                         "SocialSupport",
+                         "LifeExpectancy",
+                         "Freedom",
+                         "Generosity",
+                         "Corruption"))
+
+ggplot(data_hist_europe, aes(x = HappinessScore,color= Year, fill = Year)) + 
+geom_histogram(fill = "grey", alpha = .5) +
+geom_histogram(colour = "black") +
+facet_zoom(y = Country == "Poland",split = TRUE)
+
+
+## Option 2
+
+ggplot(data = data_hist_europe, aes(x = HappinessScore)) +
+  geom_histogram(aes(y = ..density..)) +
+  stat_density(geom = 'line', color = 'red', size = 1) +
+  stat_function(fun = dnorm,
+                color = 'blue',
+                size = 3,
+                geom = 'line',
+                args = list(mean = mean(data_hist_europe$HappinessScore), 
+                            sd = sd(data_hist_europe$HappinessScore)))+
+  facet_zoom(y = Country == "Poland",split = TRUE)
+
+
 #7) Boxplot by contient #Dustin_4
 
 ggplot(data = filter(data, !is.na(data$continent)),
@@ -427,5 +499,103 @@ ggplot(data = filter(data, !is.na(data$continent)),
 
 
 #8) BarPlot focusing on poland. #Adnan_3
+
+## Option 1
+data_barplot_country <-   data %>% 
+  select(c( "Country", 
+            "HappinessScore"
+  )) %>% 
+  drop_na(Country) %>% 
+  group_by(Country) %>% 
+  summarise_all(mean , na.rm = TRUE)
+
+
+data_barplot_country_top10 <-   data %>% 
+  select(c( "Country", 
+            "HappinessScore",
+  )) %>% 
+  drop_na(Country) %>% 
+  group_by(Country) %>% 
+  summarise_all(mean , na.rm = TRUE) %>% 
+  top_n(10) %>% 
+  mutate (PositionFlag = 'Top10') %>% 
+  arrange(desc(HappinessScore))
+
+
+
+data_barplot_country_bottom10 <-   data %>% 
+  select(c( "Country", 
+            "HappinessScore")) %>% 
+  drop_na(Country) %>% 
+  group_by(Country) %>% 
+  summarise_all(mean , na.rm = TRUE) %>% 
+  top_n(-10) %>% 
+  mutate (PositionFlag = 'Bottom10') %>% 
+  arrange(HappinessScore)
+
+
+
+
+data_barplot_country_top_bottom_union <- 
+  union_all(data_barplot_country_top10,data_barplot_country_bottom10) %>% 
+  arrange(HappinessScore)
+
+data_barplot_country_top_bottom_union$HappinessScore <- round(data_barplot_country_top_bottom_union$HappinessScore,3)
+data_barplot_country_top_bottom_union$Country <- reorder(data_barplot_country_top_bottom_union$Country, data_barplot_country_top_bottom_union$HappinessScore)
+
+
+ggplot(data_barplot_country_top_bottom_union, aes(x = Country, y= HappinessScore, fill = PositionFlag)) +
+  geom_bar(stat='identity') +
+  coord_flip()+
+  labs(title = "Top and Bottom 10 Countries",
+       y = 'Happiness Score',
+       x = NULL,
+       caption = "Own creation. Data: World Happiness Report, World Bank") +
+  theme_minimal() +
+  theme(legend.position = 'bottom',
+        plot.title = element_text(hjust = 0.5),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label = HappinessScore), vjust = -.5,hjust = -.1, position = position_dodge(.5),
+            size = 3)+
+  scale_fill_manual(values = c('grey78', 'khaki')) 
+
+
+
+## Option2
+data_barplot_continent <- data %>% 
+                          select(c("continent",
+                                   #"Country", 
+                                   #"Year", 
+                                   "HappinessScore",
+                                   "GDPPer",
+                                   "SocialSupport",
+                                   "LifeExpectancy",
+                                   "Freedom",
+                                   "Generosity",
+                                   "Corruption")) %>% 
+                          drop_na(continent) %>% 
+                          group_by(continent) %>% 
+                          summarise_all(mean , na.rm = TRUE) %>% 
+                          arrange(desc(HappinessScore))
+
+
+
+
+
+ggplot(melt(data_barplot_continent), aes(y=value, x=continent, color=continent, fill=continent)) + 
+  geom_bar( stat="identity") +    
+  facet_wrap(~variable) + theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Happiness Score by Region", 
+       y = "Average value")
+
+
+
+
+
+
+
+
 
      
