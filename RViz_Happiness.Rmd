@@ -25,7 +25,7 @@ knitr::opts_chunk$set(
 #install needed packages
 if (!require("pacman")) install.packages("pacman")
 
-pacman::p_load(
+pacman::p_load(                                # Install or/and import libraries.
                "ggplot2",
                "tidyverse",
                "dplyr",
@@ -61,15 +61,15 @@ Sys.setlocale("LC_TIME", "English")
 
 # Set Working directory
 
-setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+setwd(dirname(rstudioapi::getSourceEditorContext()$path))   # Set the current path as directory.
 
 #Upload Dataset
 
-data <- read.csv("data/DataForTable2.1.csv")
+data <- read.csv("data/DataForTable2.1.csv")      
 data_raw <- read.csv("data/DataForTable2.1.csv") %>% 
-            select(-c(Negative.affect,Positive.affect,Confidence.in.national.government))
+            select(-c(Negative.affect,Positive.affect,Confidence.in.national.government))  # Delete Columns
 
-names(data_raw)<-c("Country", 
+names(data_raw)<-c("Country",                       # Rename Columns
                "Year", 
                "HappinessScore",
                "GDPPer",
@@ -82,7 +82,7 @@ names(data_raw)<-c("Country",
 nrow(data)
 
 # Getting additional stats for countries
-my_indicators <- c(
+my_indicators <- c(                         
   life_exp = "SP.DYN.LE00.IN", 
   gdp_capita ="NY.GDP.PCAP.CD", 
   pop = "SP.POP.TOTL"
@@ -94,15 +94,15 @@ data <- data[complete.cases(data),]  #only complete dataset
 nrow(data)
 
 #drop the below columns
-data$Negative.affect<-NULL
-data$Positive.affect<-NULL
-data$Confidence.in.national.government<-NULL
+data$Negative.affect<-NULL     # Drop Column
+data$Positive.affect<-NULL     # Drop Column
+data$Confidence.in.national.government<-NULL   # Drop Column
 
 names(data)
 
 #Rename Columns
-
-names(data)<-c("Country", 
+ 
+names(data)<-c("Country",          # Rename Columns
                "Year", 
                "HappinessScore",
                "GDPPer",
@@ -161,8 +161,8 @@ gworld
 
 ```{r Hist, echo=FALSE}
 data_hist <- data %>% 
-            drop_na(continent) %>%
-            select(c("continent",
+            drop_na(continent) %>%   # Drop na from continent 
+            select(c("continent",    # Select specific Column
                     "Country", 
                      "Year", 
                      "HappinessScore",
@@ -173,16 +173,16 @@ data_hist <- data %>%
                      "Generosity",
                      "Corruption"))
 
-ggplot(data_hist %>% filter(continent != "Seven seas (open ocean)"), aes(x = HappinessScore, fill = continent)) + 
+ggplot(data_hist %>% filter(continent != "Seven seas (open ocean)"), aes(x = HappinessScore, fill = continent)) +  # Filter out Open seas.
   geom_histogram(fill = "grey", alpha = .5) +
   geom_histogram(colour = "black") +
-  facet_wrap(~ continent) + guides(fill = FALSE)+
+  facet_wrap(~ continent) + guides(fill = FALSE)+                       # in order to separate via  continent.
   labs(title = "Distribution of Happiness Score by Region",
        x = "",
        y = "",
        caption = "Own creation. Data: World Happiness Report, World Bank")+
   theme(plot.title = element_text(size = 15, hjust = 0.5))+
-  theme_stata()
+  theme_stata()   # Use stata theme
 ```
 
 ## Happiness Ranking  {.flexbox .vcenter}
@@ -194,7 +194,7 @@ data_barplot_country <-   data %>%   # Mean Happiness Score by Country
   )) %>% 
   drop_na(Country) %>%  # Drop Na
   group_by(Country) %>% 
-  summarise_all(mean , na.rm = TRUE)
+  summarise_all(mean , na.rm = TRUE) # Summarise all column by mean
 
 
 data_barplot_country_top10 <-   data %>%   #Top 10 countries in terms of Happiness score
@@ -205,20 +205,20 @@ data_barplot_country_top10 <-   data %>%   #Top 10 countries in terms of Happine
   group_by(Country) %>% 
   summarise_all(mean , na.rm = TRUE) %>% 
   top_n(10) %>%                        # First 10
-  mutate (Position = 'Top10') %>%      # Flag as Position 10
+  mutate (Position = 'Top10') %>%      # Flag as Top 10
   arrange(desc(HappinessScore))        # Descending Order
 
 
 
-data_barplot_country_bottom10 <-   data %>% 
+data_barplot_country_bottom10 <-   data %>% #Bottom 10 countries in terms of Happiness score
   select(c( "Country", 
             "HappinessScore")) %>% 
   drop_na(Country) %>% 
   group_by(Country) %>% 
   summarise_all(mean , na.rm = TRUE) %>% 
-  top_n(-10) %>% 
-  mutate (Position = 'Bottom10') %>% 
-  arrange(HappinessScore)
+  top_n(-10) %>%                              # Bottom 10
+  mutate (Position = 'Bottom10') %>%            # Flag as Bottom 10
+  arrange(HappinessScore)      # Ascending Descending Order
 
 
 data_barplot_country_top_bottom_union <- 
@@ -236,15 +236,15 @@ data_barplot_country_top_bottom_union$HappinessScore <- round(data_barplot_count
 data_barplot_country_top_bottom_union$Country <- reorder(data_barplot_country_top_bottom_union$Country, data_barplot_country_top_bottom_union$HappinessScore)  # Reorder Country
 data_barplot_country_top_bottom_union$continent <- reorder(data_barplot_country_top_bottom_union$continent, data_barplot_country_top_bottom_union$HappinessScore) # Reorder Happiness Score
 
-data_barplot_country_top_bottom_union[is.na(data_barplot_country_top_bottom_union$continent),"continent"] <- "Africa" 
+data_barplot_country_top_bottom_union[is.na(data_barplot_country_top_bottom_union$continent),"continent"] <- "Africa" # Missing Continet Africa fill out.
 
-freq_table <- data_barplot_country_top_bottom_union %>% 
+freq_table <- data_barplot_country_top_bottom_union %>%   # Frequency Table of Top 10 in terms of Continent.
   select(continent,Position) %>% 
   count() %>% 
   arrange(desc(Position), desc(freq))
 
-names(freq_table)[3] = '# Countries'
-names(freq_table)[1] = 'Continent'
+names(freq_table)[3] = '# Countries'  # Rename as # Countries
+names(freq_table)[1] = 'Continent'    # Renames as Continent
 
 ggplot(data_barplot_country_top_bottom_union, aes(x = Country, y= HappinessScore, fill = Position)) +
   geom_bar(stat='identity') +
@@ -336,7 +336,7 @@ european_union_data_top10_PL <- european_union_data %>%
 
 data1 <- european_union_data_top10_PL
 data1$Year <- as.character(data1$Year)   # Year to character for newggslopegraph.
-data1$HappinessScore <- round(data1$HappinessScore,2)
+data1$HappinessScore <- round(data1$HappinessScore,2) # Round happiness to 2 decimal
 
 
 newggslopegraph(data1, Year, HappinessScore, Country,
