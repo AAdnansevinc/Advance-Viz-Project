@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 
 
 ```{r settings_1, include=FALSE}
-#install needed packages
+#install needed packages more easily with pacman
 if (!require("pacman")) install.packages("pacman")
 
 pacman::p_load(                                # Install or/and import libraries.
@@ -59,17 +59,17 @@ pacman::p_load(                                # Install or/and import libraries
 
 Sys.setlocale("LC_TIME", "English")
 
-# Set Working directory
+# Set the current path as directory
+setwd(dirname(rstudioapi::getSourceEditorContext()$path))   
 
-setwd(dirname(rstudioapi::getSourceEditorContext()$path))   # Set the current path as directory.
-
-#Upload Dataset
-
-data <- read.csv("data/DataForTable2.1.csv")      
-data_raw <- read.csv("data/DataForTable2.1.csv") %>% 
+# Import dataset
+data <- read.csv("data/DataForTable2.1.csv") 
+# Create copy of dataset for future work
+data_raw <- data %>% 
             select(-c(Negative.affect,Positive.affect,Confidence.in.national.government))  # Delete Columns
 
-names(data_raw)<-c("Country",                       # Rename Columns
+# Rename Columns
+names(data_raw)<-c("Country",                       
                "Year", 
                "HappinessScore",
                "GDPPer",
@@ -79,30 +79,28 @@ names(data_raw)<-c("Country",                       # Rename Columns
                "Generosity",
                "Corruption")
 
-nrow(data)
-
-# Getting additional stats for countries
+# Import additional stats from World Bank
+# Define indicators
 my_indicators <- c(                         
   life_exp = "SP.DYN.LE00.IN", 
   gdp_capita ="NY.GDP.PCAP.CD", 
   pop = "SP.POP.TOTL"
 )
-world_stats <- wb_data(my_indicators, start_date = min(data$year), end_date = max(data$year)) #wb_bank getting dataset from dataset
+# Query data
+world_stats <- wb_data(my_indicators, start_date = min(data$year), end_date = max(data$year)) 
 
 # Inspecting dataframe
 data <- data[complete.cases(data),]  #only complete dataset
 nrow(data)
-
-#drop the below columns
-data$Negative.affect<-NULL     # Drop Column
-data$Positive.affect<-NULL     # Drop Column
-data$Confidence.in.national.government<-NULL   # Drop Column
-
-names(data)
+ 
+# Drop the below columns
+data$Negative.affect<-NULL     
+data$Positive.affect<-NULL     
+data$Confidence.in.national.government<-NULL
 
 #Rename Columns
- 
-names(data)<-c("Country",          # Rename Columns
+names(data)
+names(data)<-c("Country",          
                "Year", 
                "HappinessScore",
                "GDPPer",
@@ -112,7 +110,7 @@ names(data)<-c("Country",          # Rename Columns
                "Generosity",
                "Corruption")
 
-# Add missing years
+# Complete dataset with missing years
 countries <- unique(data$Country)
 years <- unique(data$Year)
 all <- data.frame(expand.grid(countries,years))
@@ -129,15 +127,15 @@ data <- left_join(data, world[c("name","economy","continent", "subregion")], by 
 ## Happiness Around the World {.flexbox .vcenter}
 
 ```{r Map World, echo=FALSE}
-# filter to 2021
+# Filter to 2021
 data_2021 <- data %>% 
   mutate(HappinessScore = round(HappinessScore,2)) %>% 
   filter(Year == 2021)
 
-# join spacial data with dataset
+# Join spacial data with dataset
 data_world <- full_join(data_2021, world, by = c("Country"="name","economy","continent", "subregion","geometry"))
 
-# create base world plot
+# Create base world plot
 theme_set(theme_bw())
 
 gworld_base <- 
@@ -146,7 +144,7 @@ gworld_base <-
   geom_sf(aes(geometry =  geometry, fill =  HappinessScore)) +
   scale_fill_gradient(low="red", high="green",na.value = "grey") 
 
-# World Plot  
+# Create World Plot  
 gworld <- 
   gworld_base +
   theme(legend.position = 'bottom',
@@ -160,6 +158,7 @@ gworld
 ## Distribution of Happiness {.flexbox .vcenter}
 
 ```{r Hist, echo=FALSE}
+# Prep data
 data_hist <- data %>% 
             drop_na(continent) %>%   # Drop na from continent 
             select(c("continent",    # Select specific Column
@@ -173,10 +172,12 @@ data_hist <- data %>%
                      "Generosity",
                      "Corruption"))
 
+# Generate plot
 ggplot(data_hist %>% filter(continent != "Seven seas (open ocean)"), aes(x = HappinessScore, fill = continent)) +  # Filter out Open seas.
   geom_histogram(fill = "grey", alpha = .5) +
   geom_histogram(colour = "black") +
-  facet_wrap(~ continent) + guides(fill = FALSE)+                       # in order to separate via  continent.
+  facet_wrap(~ continent) + # separate by continent.
+  guides(fill = FALSE)+                       
   labs(title = "Distribution of Happiness Score by Region",
        x = "",
        y = "",
@@ -188,6 +189,7 @@ ggplot(data_hist %>% filter(continent != "Seven seas (open ocean)"), aes(x = Hap
 ## Happiness Ranking  {.flexbox .vcenter}
 
 ```{r BarPlot2, echo=FALSE}
+# Prepare data
 data_barplot_country <-   data %>%   # Mean Happiness Score by Country
   select(c( "Country", 
             "HappinessScore"
@@ -246,6 +248,7 @@ freq_table <- data_barplot_country_top_bottom_union %>%   # Frequency Table of T
 names(freq_table)[3] = '# Countries'  # Rename as # Countries
 names(freq_table)[1] = 'Continent'    # Renames as Continent
 
+# Generate Plot
 ggplot(data_barplot_country_top_bottom_union, aes(x = Country, y= HappinessScore, fill = Position)) +
   geom_bar(stat='identity') +
   coord_flip()+
@@ -275,19 +278,18 @@ ggplot(data_barplot_country_top_bottom_union, aes(x = Country, y= HappinessScore
 # Use world base plot for subplot
 gworld_sub <- 
   gworld_base +
-  geom_rect(xmin = -30, xmax = 50, ymin = 35, ymax = 70, 
+  geom_rect(xmin = -30, xmax = 50, ymin = 35, ymax = 70, # Place rectange at Europe
             fill = NA, colour = "black", size = 1.5) +
   theme(legend.position= 'none',
         axis.text = element_blank(),
         axis.ticks=element_blank(),
   )
 
-# create plot for Europe
+# Create plot for Europe
 geurope <- ggplot(data = data_world) +
-  # geom_sf(aes(fill = income_grp)) +
   coord_sf(expand = FALSE) +
   geom_sf(aes(geometry =  geometry, fill =  HappinessScore)) +
-  annotate(geom = "text", x = 19, y = 52, label = "Poland", 
+  annotate(geom = "text", x = 19, y = 52, label = "Poland", # Add Poland as text 
            fontface = "italic", color = "black", size = 4) +
   scale_fill_gradient(low="red", high="green",na.value = "grey") +
   coord_sf(xlim = c(-30, 50), ylim = c(35, 70), expand = TRUE) +
@@ -296,25 +298,24 @@ geurope <- ggplot(data = data_world) +
   labs(title = "Happiness Europe in 2021",
        caption = "Own creation. Data: World Happiness Report, World Bank")
 
-# geurope
-# generate plot 
+# Generate plot for Europe with world subplot
 ggdraw() +
   draw_plot(geurope,
             0, 0, 1, 1) +
   draw_plot(gworld_sub, 
-            0.03, 0.25, 0.2, 0.2)
+            0.03, 0.25, 0.2, 0.2) # subplot in left corner
 ```
 
 ## Change of Happiness Ranking {.flexbox .vcenter}
 
 ```{r Happiness Ranking 2, echo=FALSE} 
+# Data prep
 european_union <- c("Austria","Belgium","Bulgaria","Croatia","Cyprus",                # List of European Countries.
                     "Czech Rep.","Denmark","Estonia","Finland","France",
                     "Germany","Greece","Hungary","Ireland","Italy","Latvia",
                     "Lithuania","Luxembourg","Malta","Netherlands","Poland",
                     "Portugal","Romania","Slovakia","Slovenia","Spain",
                     "Sweden","United Kingdom")
-
 
 
 european_union_data <-                                                               # Extract Just European Countries
@@ -328,7 +329,6 @@ european_union_data_top10 <- european_union_data %>%                            
                             head(10)
 
 
-
 european_union_data_top10_PL <- european_union_data %>% 
                                 filter(Country %in% c(european_union_data_top10$Country , "Poland")) %>%    # Filter date
                                 filter(Year> 2009) %>% 
@@ -339,6 +339,7 @@ data1$Year <- as.character(data1$Year)   # Year to character for newggslopegraph
 data1$HappinessScore <- round(data1$HappinessScore,2) # Round happiness to 2 decimal
 
 
+# Generate Plot
 newggslopegraph(data1, Year, HappinessScore, Country,
                 Title = "Top 10 European Countries & Poland's Happiness Score",          
                 SubTitle = "2010-2021",
@@ -352,9 +353,11 @@ newggslopegraph(data1, Year, HappinessScore, Country,
 ## Drivers of Happiness {.flexbox .vcenter}
 
 ```{r Scatter plot, echo=FALSE}
+# Data prep
 data_Scatter <- data_raw %>%  
-        mutate(PolandFlag = ifelse(Country == "Poland", "Poland", "Trend Line")) #Flag the Country whether is Poland or Others.
+        mutate(PolandFlag = ifelse(Country == "Poland", "Poland", "Trend Line")) # Flag the Country whether is Poland or Others.
 
+# Generate Plots
 g1 <- ggplot(data_Scatter,aes(x = GDPPer, y = HappinessScore,color = PolandFlag)) + 
   geom_point(color = "#adaaaa")+
   geom_smooth(alpha = 0.2) +
@@ -398,18 +401,17 @@ g4 <- ggplot(data_Scatter,aes(x = Freedom, y = HappinessScore,color = PolandFlag
        color = '',
        x = 'Freedom' , y = 'HappinessScore')
 
-
-g4 <- g4 + theme(legend.position = "bottom") 
+g4 <- g4 + theme(legend.position = "bottom")
+# Get legend from last plot
 legend <- get_legend(g4) 
 
-
-# title formatting
+# Title formatting
 title <- textGrob("Correlation of Happiness Score",
                   gp = gpar(fontsize = 15, # font size
                             fontface = 2) # bold type
 )
 
-
+# Arrange plots
 grid.arrange(arrangeGrob(g1 + theme(legend.position = "none"),  #We use grid.arrange to display 4 graphs.
                          g2 + theme(legend.position = "none"), 
                          g3 + theme(legend.position = "none"), 
@@ -422,15 +424,14 @@ grid.arrange(arrangeGrob(g1 + theme(legend.position = "none"),  #We use grid.arr
 ) 
 ```
 
-Own creation. Data: World Happiness Report, World Bank
+<font size="1"> *Own creation. Data: World Happiness Report, World Bank* </font>
 
 ## Happiness and GDP {.flexbox .vcenter}
 
 ```{r Bubble plot, include=FALSE}
-# Set focus countries
-focus <- c("Poland", "Germany", "Ukraine", "Romania", "Bulgaria")
 
-# search for countries with biggest difference in score
+## Search for countries with biggest difference in score for highlighting
+# focus <- unique(data$Country %>% filter(Year > 2010 & continent == 'Europe))
 # inspect <- data_bubble[c("Country", 
 #                          "Year", 
 #                          "HappinessScore",
@@ -448,9 +449,10 @@ focus <- c("Poland", "Germany", "Ukraine", "Romania", "Bulgaria")
 #   arrange(diff) %>%
 #     ungroup()
 
-# focus <- unique(data$Country)
+# Set focus countries
+focus <- c("Poland", "Germany", "Ukraine", "Romania", "Bulgaria")
 
-# set up dataframe
+# Set up dataframe
 data_bubble <- data %>% 
   filter(!is.na(data$HappinessScore) & Year > 2010 & continent == "Europe") %>%
   mutate(mask= case_when(Country %in% focus ~ Country))
@@ -477,7 +479,7 @@ bubble <- ggplot(data_bubble, aes(gdp_capita, HappinessScore, size = pop, color 
   ease_aes('linear') +
   shadow_wake(1, alpha = 0.2, exclude_layer = 2:3, size = 1, wrap = FALSE) # no wake for non focus countries and text
 
-# Save as gif:
+# Save as gif (commented to save runtime when knitting)
 # gif <- animate(bubble,renderer = gifski_renderer(), end_pause=100, nframes = 200)
 # anim_save("img/BubbleChart.gif",animation=gif) 
 ```
@@ -487,46 +489,49 @@ bubble <- ggplot(data_bubble, aes(gdp_capita, HappinessScore, size = pop, color 
 ## Happiness and COVID {.flexbox .vcenter}
 
 ```{r line plot, echo=FALSE}
+# Data prep
 data_line <- data %>%
   group_by(Year, continent) %>%
   summarise_at(vars(HappinessScore),
-               list(HappinessScore = mean), na.rm = TRUE) %>%
-  # summarize_at(HappinessScore = mean(HappinessScore,na.rm = TRUE)) %>%
+               list(HappinessScore = mean), na.rm = TRUE) %>% # Get mean by continent per year
   ungroup()
 
 data_line2 <- data %>%
   group_by(Year) %>%
   summarise_at(vars(HappinessScore),
-               list(HappinessScore = mean), na.rm = TRUE) %>%
+               list(HappinessScore = mean), na.rm = TRUE) %>% # Get global mean by year
   ungroup()
 
-data_line2 <- data_line2 %>% add_column("Country"="World")
+data_line2 <- data_line2 %>% add_column("Country"="World") # Add column Country for unioning
 
 names(data_line) <- c("Year",
                       "Country",
-                      "HappinessScore")
-
+                      "HappinessScore") # Unify naming
+# Union data
 data_line <- union_all(data_line, data_line2)
 data_line <- union_all(data_line, filter(data[c("Year", "Country","HappinessScore")], Country == "Poland"))
 
+# Generate Plot
 ggplot(filter(data_line, Country %in% c("World","Europe","Poland") & Year >= 2010),aes(Year,HappinessScore, group = Country, color = Country)) +
   geom_rect(aes(xmin = 2019, ymin = -Inf,
                 xmax = Inf, ymax = Inf),
-            alpha = .4, fill = "grey", color = NA
+            alpha = .4, fill = "grey", color = NA # Highlight COVID time with rectangle
   ) +
   geom_line(size = 1.2) +
   geom_point() +
-  geom_vline(xintercept = 2019,color = "black", size = 2) +
+  geom_vline(xintercept = 2019,color = "black", size = 2) + # Add vertical line to separate pre and post COVID
   geom_dl(aes(label = Country), method = list(dl.combine("last.points"), vjust = 1, hjust=0.5, cex = 1)) +
-  annotate("text", x = 2019, y = 7, label = "COVID-19", vjust = 2, hjust=-0.1, size = 5) +
+  annotate("text", x = 2019, y = 7, label = "COVID-19", vjust = 2, hjust=-0.1, size = 5) + # Add text for  COVID
   theme(legend.position = 'bottom',
         plot.title = element_text(size = 20, hjust = 0.5)) +
   labs(color = NULL,
        title = "Happiness Under COVID-19",
        caption = "Own creation. Data: World Happiness Report, World Bank") +
-  scale_color_manual(values = c('#003399', '#D22630', 'black')) 
+  scale_color_manual(values = c('#003399', '#D22630', 'black')) # Change colours to European blue and Polish red
 ```
 
+## Fin.{.flexbox .vcenter}
+![](img/Happy.png)
 
 ## Appendix
 
