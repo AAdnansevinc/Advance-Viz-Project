@@ -188,25 +188,25 @@ ggplot(data_hist %>% filter(continent != "Seven seas (open ocean)"), aes(x = Hap
 ## Happiness Ranking  {.flexbox .vcenter}
 
 ```{r BarPlot2, echo=FALSE}
-data_barplot_country <-   data %>% 
+data_barplot_country <-   data %>%   # Mean Happiness Score by Country
   select(c( "Country", 
             "HappinessScore"
   )) %>% 
-  drop_na(Country) %>% 
+  drop_na(Country) %>%  # Drop Na
   group_by(Country) %>% 
   summarise_all(mean , na.rm = TRUE)
 
 
-data_barplot_country_top10 <-   data %>% 
+data_barplot_country_top10 <-   data %>%   #Top 10 countries in terms of Happiness score
   select(c( "Country", 
             "HappinessScore",
   )) %>% 
   drop_na(Country) %>% 
   group_by(Country) %>% 
   summarise_all(mean , na.rm = TRUE) %>% 
-  top_n(10) %>% 
-  mutate (Position = 'Top10') %>% 
-  arrange(desc(HappinessScore))
+  top_n(10) %>%                        # First 10
+  mutate (Position = 'Top10') %>%      # Flag as Position 10
+  arrange(desc(HappinessScore))        # Descending Order
 
 
 
@@ -222,19 +222,19 @@ data_barplot_country_bottom10 <-   data %>%
 
 
 data_barplot_country_top_bottom_union <- 
-  union_all(data_barplot_country_top10,data_barplot_country_bottom10) %>% 
+  union_all(data_barplot_country_top10,data_barplot_country_bottom10) %>%  # Union Top and Bottom 10 Countries
   arrange(HappinessScore)
 
 
-data_barplot_country_top_bottom_union = data %>% 
+data_barplot_country_top_bottom_union = data %>%  # Right Join in order to get Continent
   select(continent,Country) %>% 
   unique()  %>% 
   right_join(data_barplot_country_top_bottom_union, by ="Country")
 
 
-data_barplot_country_top_bottom_union$HappinessScore <- round(data_barplot_country_top_bottom_union$HappinessScore,3)
-data_barplot_country_top_bottom_union$Country <- reorder(data_barplot_country_top_bottom_union$Country, data_barplot_country_top_bottom_union$HappinessScore)
-data_barplot_country_top_bottom_union$continent <- reorder(data_barplot_country_top_bottom_union$continent, data_barplot_country_top_bottom_union$HappinessScore)
+data_barplot_country_top_bottom_union$HappinessScore <- round(data_barplot_country_top_bottom_union$HappinessScore,3) # Round Happiness Score
+data_barplot_country_top_bottom_union$Country <- reorder(data_barplot_country_top_bottom_union$Country, data_barplot_country_top_bottom_union$HappinessScore)  # Reorder Country
+data_barplot_country_top_bottom_union$continent <- reorder(data_barplot_country_top_bottom_union$continent, data_barplot_country_top_bottom_union$HappinessScore) # Reorder Happiness Score
 
 data_barplot_country_top_bottom_union[is.na(data_barplot_country_top_bottom_union$continent),"continent"] <- "Africa" 
 
@@ -308,7 +308,7 @@ ggdraw() +
 ## Change of Happiness Ranking {.flexbox .vcenter}
 
 ```{r Happiness Ranking 2, echo=FALSE} 
-european_union <- c("Austria","Belgium","Bulgaria","Croatia","Cyprus",
+european_union <- c("Austria","Belgium","Bulgaria","Croatia","Cyprus",                # List of European Countries.
                     "Czech Rep.","Denmark","Estonia","Finland","France",
                     "Germany","Greece","Hungary","Ireland","Italy","Latvia",
                     "Lithuania","Luxembourg","Malta","Netherlands","Poland",
@@ -317,11 +317,11 @@ european_union <- c("Austria","Belgium","Bulgaria","Croatia","Cyprus",
 
 
 
-european_union_data <- 
+european_union_data <-                                                               # Extract Just European Countries
                      data_raw %>% 
                       filter(Country %in% european_union)
 
-european_union_data_top10 <- european_union_data %>% 
+european_union_data_top10 <- european_union_data %>%                                # Extract Top 10 European Countries
                             group_by(Country) %>%
                             summarise_all(mean) %>%
                             arrange(desc(HappinessScore)) %>% 
@@ -330,17 +330,17 @@ european_union_data_top10 <- european_union_data %>%
 
 
 european_union_data_top10_PL <- european_union_data %>% 
-                                filter(Country %in% c(european_union_data_top10$Country , "Poland")) %>% 
+                                filter(Country %in% c(european_union_data_top10$Country , "Poland")) %>%    # Filter date
                                 filter(Year> 2009) %>% 
                                 filter(Year<= 2021)
 
 data1 <- european_union_data_top10_PL
-data1$Year <- as.character(data1$Year)
+data1$Year <- as.character(data1$Year)   # Year to character for newggslopegraph.
 data1$HappinessScore <- round(data1$HappinessScore,2)
 
 
 newggslopegraph(data1, Year, HappinessScore, Country,
-                Title = "Top 10 European Countries & Poland's Happiness Score",
+                Title = "Top 10 European Countries & Poland's Happiness Score",          
                 SubTitle = "2010-2021",
                 Caption = "Own creation. Data: World Happiness Report, World Bank",
                 DataLabelPadding = 0.2,
@@ -353,16 +353,16 @@ newggslopegraph(data1, Year, HappinessScore, Country,
 
 ```{r Scatter plot, echo=FALSE}
 data_Scatter <- data_raw %>%  
-        mutate(PolandFlag = ifelse(Country == "Poland", "Poland", "Trend Line"))
+        mutate(PolandFlag = ifelse(Country == "Poland", "Poland", "Trend Line")) #Flag the Country whether is Poland or Others.
 
 g1 <- ggplot(data_Scatter,aes(x = GDPPer, y = HappinessScore,color = PolandFlag)) + 
   geom_point(color = "#adaaaa")+
   geom_smooth(alpha = 0.2) +
-  geom_rect(xmin = 9.977814, xmax = 10.4364, ymin = 5.646205, ymax = 6.242094, 
+  geom_rect(xmin = 9.977814, xmax = 10.4364, ymin = 5.646205, ymax = 6.242094, # To rectangle Poland
             fill = NA, colour = "red", size = 1)+
-  scale_y_continuous(breaks = seq(0, 8, by = 0.5))+
+  scale_y_continuous(breaks = seq(0, 8, by = 0.5))+                # y scale start from 0 till 8 with 0.5 incremental
   scale_x_continuous(breaks = seq(0, 12, by = 0.5),
-                     labels = paste0('$', 
+                     labels = paste0('$',                          # Paste $ sign to x scale.
                                      seq(0, 12, by = 0.5)))+
   labs(title = '',
        x = 'GDP Per capita' , y = 'HappinessScore')
@@ -410,7 +410,7 @@ title <- textGrob("Correlation of Happiness Score",
 )
 
 
-grid.arrange(arrangeGrob(g1 + theme(legend.position = "none"), 
+grid.arrange(arrangeGrob(g1 + theme(legend.position = "none"),  #We use grid.arrange to display 4 graphs.
                          g2 + theme(legend.position = "none"), 
                          g3 + theme(legend.position = "none"), 
                          g4 + theme(legend.position = "none"), 
