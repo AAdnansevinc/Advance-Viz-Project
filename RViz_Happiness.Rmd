@@ -262,8 +262,8 @@ ggplot(data_barplot_country_top_bottom_union, aes(x = Country, y= HappinessScore
         plot.title = element_text(hjust = 0.5),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank()) +
-  geom_text(aes(label = HappinessScore), vjust = -.5,hjust = -.1, position = position_dodge(.5),
-            size = 3)+
+  geom_text(aes(label = HappinessScore), vjust = .2,hjust = -.1, position = position_dodge(.5),
+            size = 3) +
   scale_fill_manual(values = c('grey78', 'khaki')) +
   geom_hline(yintercept = mean(data$HappinessScore, na.rm = TRUE,show.legend = TRUE), linetype="dashed", color = "red") +
   annotate(geom = 'table',
